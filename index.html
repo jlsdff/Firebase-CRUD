@@ -1,0 +1,226 @@
+<!-- @format -->
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Firebase CRUD</title>
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <h1>Firebase CRUD</h1>
+
+        <form action="#" id="newStudentForm">
+            <div>
+                <label for="firstname">First Name: </label>
+                <input type="text" name="firstname" id="firstname" />
+            </div>
+            <div>
+                <label for="lastname">Last Name: </label>
+                <input type="text" name="lastname" id="lastname" />
+            </div>
+            <div>
+                <label for="batch">Batch:</label>
+                <input type="number" name="batch" id="batch" />
+            </div>
+            <div>
+                <label for="grade">Grade:</label>
+                <input type="number" name="grade" id="grade" />
+            </div>
+            <div>
+                <button type="submit">Add Student</button>
+            </div>
+        </form>
+
+        <table>
+            <thead>
+                <th>Last Name</th>
+                <th>First Name</th>
+                <th>Batch</th>
+                <th>Grade</th>
+                <th>Actions</th>
+            </thead>
+            <tbody id="students-records"></tbody>
+        </table>
+
+        <script type="module">
+            // Import the functions you need from the SDKs you need
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+            import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-analytics.js";
+            import {
+                getFirestore,
+                collection,
+                onSnapshot,
+                addDoc,
+                doc,
+                deleteDoc,
+                updateDoc
+            } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
+
+            // TODO: Add SDKs for Firebase products that you want to use
+            // https://firebase.google.com/docs/web/setup#available-libraries
+
+            // Your web app's Firebase configuration
+            // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+            const firebaseConfig = {
+                apiKey: "AIzaSyBCbKf72aiOBE7mptTEB4c_Sxmj-R8V8_Y",
+                authDomain: "studentrecords-5531a.firebaseapp.com",
+                projectId: "studentrecords-5531a",
+                storageBucket: "studentrecords-5531a.appspot.com",
+                messagingSenderId: "510964334379",
+                appId: "1:510964334379:web:e382816d5a4585acef4f6e",
+                measurementId: "G-FV11C5GZRH",
+            };
+
+            // Initialize Firebase
+            const app = initializeApp(firebaseConfig);
+            const analytics = getAnalytics(app);
+            const db = getFirestore(app);
+
+            onSnapshot(collection(db, "students"), (snapshot) => {
+
+                document.querySelector("#students-records").innerHTML = "";
+
+                snapshot.forEach((student) => {
+
+                    const id = student.id
+                    const {surname, firstname, batch, grade} = student.data()
+
+                    createStudentRow({surname, firstname, batch, grade, id})
+
+                });
+
+            });
+
+            document
+                .querySelector("#newStudentForm")
+                .addEventListener("submit", (e) => {
+                    e.preventDefault();
+
+                    const student = {
+                        surname: document.querySelector("#lastname").value,
+                        firstname: document.querySelector("#firstname").value,
+                        batch: document.querySelector("#batch").value,
+                        grade: document.querySelector("#grade").value,
+                    };
+
+                    addDoc(collection(db, "students"), student);
+
+                    document
+                        .querySelectorAll("input")
+                        .forEach((input) => (input.value = ""));
+                });
+
+            
+            function createStudentRow({surname, firstname, batch, grade, id}){
+
+                const tableBody = document.querySelector("#students-records")
+
+                const row = document.createElement("tr")
+                row.setAttribute("data-id", id)
+
+                const surnameElement = document.createElement("td")
+                const firstNameElement = document.createElement("td")
+                const batchElement = document.createElement("td")
+                const gradeElement = document.createElement("td")
+                const actions = document.createElement("td")
+
+                surnameElement.innerText = surname
+                firstNameElement.innerText = firstname
+                batchElement.innerText = batch
+                gradeElement.innerText = grade
+
+                const deleteButton = document.createElement("button")
+                const editButton = document.createElement("button")
+
+                deleteButton.innerText = "Delete"
+                editButton.innerText = "Edit"
+                
+                deleteButton.addEventListener("click", () => {
+                    deleteStudent({surname, firstname, batch, grade, id})
+                })
+
+                editButton.addEventListener("click", () => {
+                    editStudent({surname, firstname, batch, grade, id})
+                })
+
+                actions.appendChild(deleteButton)
+                actions.appendChild(editButton)
+
+                row.appendChild(surnameElement)
+                row.appendChild(firstNameElement)
+                row.appendChild(batchElement)
+                row.appendChild(gradeElement)
+                row.appendChild(actions)
+
+                tableBody.appendChild(row)
+
+            }
+
+            function editStudent({surname, firstname, batch, grade, id}){
+
+                const row = document.querySelector(`[data-id="${id}"]`)
+                const [surnameElement, firstNameElement, batchElement, gradeElement, actions] = row.children
+
+                const surnameInput = document.createElement("input")
+                const firstNameInput = document.createElement("input")
+                const batchInput = document.createElement("input")
+                const gradeInput = document.createElement("input")
+
+                surnameInput.value = surname
+                firstNameInput.value = firstname
+                batchInput.value = batch
+                gradeInput.value = grade
+
+                surnameElement.innerText = ""
+                firstNameElement.innerText = ""
+                batchElement.innerText = ""
+                gradeElement.innerText = ""
+
+                surnameElement.appendChild(surnameInput)
+                firstNameElement.appendChild(firstNameInput)
+                batchElement.appendChild(batchInput)
+                gradeElement.appendChild(gradeInput)
+
+                const saveButton = document.createElement("button")
+                saveButton.innerText = "Save"
+                const cancelButton = document.createElement("button")
+                cancelButton.innerText = "Cancel"
+
+                saveButton.addEventListener("click", () => {
+                    const student = {
+                        surname: surnameInput.value,
+                        firstname: firstNameInput.value,
+                        batch: batchInput.value,
+                        grade: gradeInput.value,
+                    };
+
+                    updateStudent({surname, firstname, batch, grade, id}, student)
+
+                })
+
+                cancelButton.addEventListener("click", () => {
+                    createStudentRow({surname, firstname, batch, grade, id})
+                    row.remove()
+                })
+
+                actions.innerText = ""
+                actions.appendChild(saveButton)
+                actions.appendChild(cancelButton)
+
+            }
+
+            function updateStudent({surname, firstname, batch, grade, id}, student){
+
+                updateDoc(doc(db, "students", id), student)
+                
+            }
+                
+            function deleteStudent({surname, firstname, batch, grade, id}){
+                console.log({surname, firstname, batch, grade, id})
+                deleteDoc(doc(db, "students", id))
+            }
+        </script>
+    </body>
+</html>
